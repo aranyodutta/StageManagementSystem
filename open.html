@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Stage Management System — Performer View</title>
+  <link rel="icon" href="data:," />
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<body class="performer shell" data-theme="dark">
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-dot">SM</div>
+      <div>
+        <div class="brand-title">Stage Ops</div>
+        <div class="brand-subtitle">Performer board</div>
+      </div>
+    </div>
+    <nav class="sidebar-nav" aria-label="Performer navigation">
+      <a href="./operator.html" title="Operator"><span class="nav-icon nav-operator" aria-hidden="true"></span><span class="nav-label">Operator</span></a>
+      <a class="active" href="./open.html" title="Performer"><span class="nav-icon nav-performer" aria-hidden="true"></span><span class="nav-label">Performer</span></a>
+      <a href="./confidence.html" title="Confidence Monitor"><span class="nav-icon nav-confidence" aria-hidden="true"></span><span class="nav-label">Confidence Monitor</span></a>
+      <a href="./operator.html#run-of-show" title="Run of Show"><span class="nav-icon nav-run" aria-hidden="true"></span><span class="nav-label">Run of Show</span></a>
+      <a href="./operator.html#reports" title="Reports"><span class="nav-icon nav-reports" aria-hidden="true"></span><span class="nav-label">Reports</span></a>
+      <a href="./operator.html#settings" title="Settings"><span class="nav-icon nav-settings" aria-hidden="true"></span><span class="nav-label">Settings</span></a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="small">Mode</div>
+      <div class="sidebar-path">Performer view</div>
+      <button class="sidebar-collapse-btn secondary" id="sidebarCollapseBtn" type="button" title="Collapse sidebar">
+        <span class="collapse-icon" aria-hidden="true"></span>
+        <span class="nav-label">Collapse</span>
+      </button>
+    </div>
+  </aside>
+
+  <div class="shell-main">
+    <header class="app-header">
+      <div>
+        <div class="eyebrow">Backstage Display</div>
+        <h1>Stage Management System &mdash; Performer View</h1>
+      </div>
+      <div class="header-right">
+        <div class="status-chip" id="showStatus">LOADING...</div>
+        <button class="theme-toggle secondary" id="themeToggleBtn" type="button">Light</button>
+        <img class="sm-brand sm-brand-dark" src="https://i.ibb.co/TDmLcFTj/SMALL-sm-logo-main-2-1.png" alt="Stratford Meridian" />
+      </div>
+    </header>
+
+    <main class="workspace performer-workspace">
+      <div class="hold-bar" id="holdBar" style="display:none;"></div>
+
+      <div class="top-stats kpi-row performer-kpis">
+        <div class="stat-card">
+          <h3>Schedule Status</h3>
+          <div class="value" id="scheduleStatus">-</div>
+          <div class="stat-note">Live offset</div>
+        </div>
+        <div class="stat-card">
+          <h3>Projected End</h3>
+          <div class="value" id="projectedEnd">-</div>
+          <div class="stat-note">Current estimate</div>
+        </div>
+        <div class="stat-card">
+          <h3>Current Time</h3>
+          <div class="value" id="currentTime">-</div>
+          <div class="stat-note">Local clock</div>
+        </div>
+      </div>
+
+      <div class="performer-grid">
+        <section class="panel performer-main-card">
+          <div class="panel-head">
+            <div>
+              <div class="eyebrow">On Stage Now</div>
+              <h2 id="liveTitle">-</h2>
+            </div>
+            <span class="tag live">Live</span>
+          </div>
+          <div class="performer-type" id="livePerformers">-</div>
+          <div class="captains-line" id="liveCaptains"></div>
+          <div class="progress-track"><div class="progress-fill"></div></div>
+          <div class="performer-stat-row">
+            <div><span>Status</span><strong id="performerLiveStatus">On stage</strong></div>
+            <div><span>Call</span><strong>Stay clear</strong></div>
+            <div><span>Sync</span><strong>Live</strong></div>
+          </div>
+        </section>
+
+        <aside class="performer-side-stack">
+          <div class="panel side-card">
+            <div class="eyebrow">Backstage Next</div>
+            <h2 id="backstageTitle">-</h2>
+            <div class="performers" id="backstagePerformers">-</div>
+            <div class="captains-line" id="backstageCaptains"></div>
+            <div class="timer" id="backstageTimer">GO TO STAGE IN: -</div>
+          </div>
+          <div class="panel side-card accent-card">
+            <div class="eyebrow">On Deck</div>
+            <h2 id="blueTitle">-</h2>
+            <div class="performers" id="bluePerformers">-</div>
+            <div class="captains-line" id="blueCaptains"></div>
+            <div class="timer" id="blueTimer">GET READY IN: -</div>
+          </div>
+          <div class="panel side-card" id="peoplePanel">
+            <div class="eyebrow">People On Stage</div>
+            <h2 id="peopleOnStageSummary">-</h2>
+          </div>
+        </aside>
+
+        <section class="panel upcoming-panel">
+          <div class="panel-head">
+            <h2>Upcoming</h2>
+            <span class="chip">Run of show</span>
+          </div>
+          <div class="list" id="upcomingList"></div>
+        </section>
+
+        <section class="panel message-panel" id="messages">
+          <div class="panel-head"><h2>Messages</h2><span class="chip">Backstage</span></div>
+          <div class="banner">IF YOU ARE ON DECK, YOU MUST BE READY TO WALK.</div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <script type="module" src="./app.js"></script>
+</body>
+</html>

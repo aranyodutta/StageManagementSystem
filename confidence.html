@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Stage Management System — Confidence Monitor</title>
+  <link rel="icon" href="data:," />
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<body class="confidence shell" data-theme="dark">
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-dot">SM</div>
+      <div>
+        <div class="brand-title">Stage Ops</div>
+        <div class="brand-subtitle">Confidence monitor</div>
+      </div>
+    </div>
+    <nav class="sidebar-nav" aria-label="Confidence navigation">
+      <a href="./operator.html" title="Operator"><span class="nav-icon nav-operator" aria-hidden="true"></span><span class="nav-label">Operator</span></a>
+      <a href="./open.html" title="Performer"><span class="nav-icon nav-performer" aria-hidden="true"></span><span class="nav-label">Performer</span></a>
+      <a class="active" href="./confidence.html" title="Confidence Monitor"><span class="nav-icon nav-confidence" aria-hidden="true"></span><span class="nav-label">Confidence Monitor</span></a>
+      <a href="./operator.html#run-of-show" title="Run of Show"><span class="nav-icon nav-run" aria-hidden="true"></span><span class="nav-label">Run of Show</span></a>
+      <a href="./operator.html#reports" title="Reports"><span class="nav-icon nav-reports" aria-hidden="true"></span><span class="nav-label">Reports</span></a>
+      <a href="./operator.html#settings" title="Settings"><span class="nav-icon nav-settings" aria-hidden="true"></span><span class="nav-label">Settings</span></a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="small">Mode</div>
+      <div class="sidebar-path">Confidence monitor</div>
+      <button class="sidebar-collapse-btn secondary" id="sidebarCollapseBtn" type="button" title="Collapse sidebar">
+        <span class="collapse-icon" aria-hidden="true"></span>
+        <span class="nav-label">Collapse</span>
+      </button>
+    </div>
+  </aside>
+
+  <div class="shell-main">
+  <main class="confidence-screen" id="confidenceRoot">
+    <header class="confidence-header">
+      <div>
+        <div class="eyebrow">Executive timing monitor</div>
+        <h1>Stage Management System &mdash; Confidence Monitor</h1>
+      </div>
+      <div class="confidence-header-right">
+        <div class="confidence-live" id="confidenceLiveIndicator">
+          <span class="live-dot"></span>
+          <span>STANDBY</span>
+        </div>
+        <button class="theme-toggle secondary" id="themeToggleBtn" type="button">Light</button>
+        <img class="sm-brand sm-brand-dark sm-brand-confidence" src="https://i.ibb.co/TDmLcFTj/SMALL-sm-logo-main-2-1.png" alt="Stratford Meridian" />
+      </div>
+    </header>
+
+    <section class="confidence-top-grid">
+      <div class="confidence-card">
+        <h2>Current Time</h2>
+        <div class="confidence-value" id="confidenceCurrentTime">-</div>
+      </div>
+      <div class="confidence-card">
+        <h2>Projected End</h2>
+        <div class="confidence-value" id="confidenceProjectedEnd">-</div>
+      </div>
+      <div class="confidence-card">
+        <h2>Offset</h2>
+        <div class="confidence-value" id="confidenceOffset">-</div>
+      </div>
+      <div class="confidence-card">
+        <h2>Status</h2>
+        <div class="confidence-status on-time" id="confidenceStatus">ON TIME</div>
+      </div>
+    </section>
+
+    <section class="confidence-main-grid">
+      <div class="confidence-panel current-panel">
+        <div class="confidence-kicker">Current Item</div>
+        <div class="confidence-title" id="confidenceCurrentTitle">-</div>
+        <div class="confidence-metrics">
+          <div>
+            <h3>Elapsed</h3>
+            <div id="confidenceElapsed">-</div>
+          </div>
+          <div>
+            <h3>Over / Under</h3>
+            <div id="confidenceOverUnder">-</div>
+          </div>
+          <div>
+            <h3>Estimated End</h3>
+            <div id="confidenceEstimatedEnd">-</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="confidence-panel next-panel">
+        <div class="confidence-kicker">Next Item</div>
+        <div class="confidence-title" id="confidenceNextTitle">-</div>
+        <div class="confidence-metrics two-up">
+          <div>
+            <h3>Estimated Start</h3>
+            <div id="confidenceEstimatedStart">-</div>
+          </div>
+          <div>
+            <h3>Countdown</h3>
+            <div id="confidenceCountdown">-</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="confidence-recommendation-row">
+      <div>
+        <div class="confidence-kicker">Intermission Status</div>
+        <div class="confidence-recommendation ok" id="confidenceRecommendation">INTERMISSION OK</div>
+      </div>
+      <div class="confidence-target" id="confidenceTargetEnd">Target end: -</div>
+    </section>
+  </main>
+  </div>
+
+  <script type="module" src="./app.js"></script>
+</body>
+</html>

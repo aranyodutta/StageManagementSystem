@@ -614,62 +614,92 @@
             <label class="switch-row">Auto Start on Boot<input type="checkbox" data-setting-path="systemMode.autoStartOnBoot" /></label>
             <label>Log Level<select data-setting-path="systemMode.logLevel"><option>Information</option><option>Warning</option><option>Error</option><option>Debug</option></select></label>
           </section>
+
+          <section class="panel settings-card">
+            <h2>Visibility &amp; Display</h2>
+            <label class="switch-row">Show Intermission Status Banner<input type="checkbox" data-setting-path="visibility.showIntermissionStatusBanner" /></label>
+            <p class="muted-copy">Controls the large intermission banner on the Confidence Monitor only.</p>
+          </section>
         </div>
       </section>
 
       <section class="tab-page setup-page" data-tab-panel="setup">
-        <div class="setup-hero">
+        <div class="setup-hero show-config-hero">
           <div>
             <div class="eyebrow">Pre-show configuration</div>
-            <h2>Show Setup</h2>
-            <p>Build, import, validate, and save the run of show that will be used on the next reset.</p>
+            <h2>Show Configuration</h2>
+            <p>Build and manage your run of show.</p>
           </div>
           <div class="setup-actions">
-            <button id="loadSetupBtn" class="secondary" type="button">Load Current</button>
+            <button id="loadSetupBtn" class="secondary" type="button">Discard Changes</button>
+            <button id="saveSetupDraftBtn" class="secondary" type="button">Save Draft</button>
             <button id="addSetupItemBtn" class="secondary" type="button">Add Item</button>
-            <button id="saveSetupBtn" type="button">Save Setup</button>
+            <button id="saveSetupBtn" type="button">Publish Show</button>
           </div>
         </div>
 
-        <div class="setup-meta-row">
-          <div class="panel">
+        <div class="setup-meta-row show-meta-grid">
+          <div class="panel show-meta-card">
             <label class="field-label" for="setupTitleInput">Show Title / Display Name</label>
             <input id="setupTitleInput" type="text" placeholder="Show title" />
           </div>
-          <div class="panel validation-card">
-            <div class="small">Validation Summary</div>
-            <div class="setup-status" id="setupStatus">Not saved in this session.</div>
+          <div class="panel show-meta-card">
+            <label class="field-label" for="setupDateInput">Show Date</label>
+            <input id="setupDateInput" type="date" />
           </div>
-          <div class="panel validation-card">
-            <div class="small">Setup Source</div>
-            <div class="setup-status" id="setupSourceLabel">Loading</div>
+          <div class="panel show-meta-card">
+            <label class="field-label" for="setupVenueInput">Venue / Location</label>
+            <input id="setupVenueInput" type="text" placeholder="Main Auditorium" />
+          </div>
+          <div class="panel show-meta-card">
+            <label class="field-label" for="setupTimezoneInput">Time Zone</label>
+            <input id="setupTimezoneInput" type="text" placeholder="Eastern Time (ET)" />
           </div>
         </div>
 
-        <section class="panel import-panel">
-          <div class="panel-head">
+        <div class="setup-import-grid">
+          <section class="panel import-panel import-drop-card">
             <div>
-              <h2>Excel Import</h2>
-              <div class="small">Accepted columns: Order, Title, Type, Planned, People, Mics, Chairs, Instruments, Other, Notes, Branch, Change Notes.</div>
+              <h2>Import Run of Show</h2>
+              <p class="muted-copy">Import your run of show from Excel. We'll validate and preview before applying.</p>
             </div>
-            <div class="import-actions">
+            <label class="file-drop-zone" for="excelImportInput">
+              <span class="file-icon">X</span>
+              <strong>Drop Excel file here</strong>
+              <span>or click to browse</span>
               <input id="excelImportInput" type="file" accept=".xlsx,.xls" />
+            </label>
+            <div class="import-actions">
               <button id="previewImportBtn" class="secondary" type="button">Preview Import</button>
               <button id="applyImportBtn" type="button" disabled>Replace Setup</button>
             </div>
-          </div>
-          <div class="alert" id="importStatus">No import loaded.</div>
-          <div class="import-preview" id="importPreview"></div>
-        </section>
+          </section>
+
+          <section class="panel validation-card import-validation-card">
+            <div class="panel-head">
+              <h2>Import Preview &amp; Validation</h2>
+              <span class="setup-status" id="setupStatus">Not saved in this session.</span>
+            </div>
+            <div class="validation-metrics">
+              <div><span>Total Items</span><strong id="importTotalItems">0</strong></div>
+              <div><span>Valid Rows</span><strong class="signal-success" id="importValidRows">0</strong></div>
+              <div><span>Warnings</span><strong class="signal-warn" id="importWarnings">0</strong></div>
+              <div><span>Errors</span><strong class="signal-danger" id="importErrors">0</strong></div>
+            </div>
+            <div class="alert" id="importStatus">No import loaded.</div>
+            <div class="import-preview" id="importPreview"></div>
+            <div class="small">Setup source: <span id="setupSourceLabel">Loading</span></div>
+          </section>
+        </div>
 
         <section class="panel setup-panel">
           <div class="table-toolbar">
             <div>
-              <h2>Run of Show Builder</h2>
-              <div class="small">Status is controlled by live operations, not setup.</div>
+              <h2>Run of Show</h2>
+              <div class="small">Edit your run of show items. Drag/reorder controls update setup order.</div>
             </div>
             <div class="toolbar-controls">
-              <input id="setupSearchInput" type="search" placeholder="Search setup" />
+              <input id="setupSearchInput" type="search" placeholder="Search items..." />
               <select id="setupBranchFilter">
                 <option value="">All branches</option>
                 <option value="core">Core / Linear</option>
@@ -677,7 +707,7 @@
                 <option value="skipIntermission">Skip Intermission</option>
                 <option value="custom">Custom / Inactive</option>
               </select>
-              <button id="addSetupItemBtn2" class="secondary" type="button">Add Row</button>
+              <button id="addSetupItemBtn2" type="button">Add Item</button>
             </div>
           </div>
 
@@ -720,43 +750,146 @@
       </section>
 
       <section class="tab-page" data-tab-panel="timing">
-        <section class="panel settings-panel" id="timing-settings">
-          <div class="panel-head"><h2>Timing Settings</h2><span class="chip">Saved to Firestore</span></div>
-          <div class="settings-layout">
-            <div>
-              <label class="field-label" for="actualShowStartInput">Actual Show Start</label>
-              <input id="actualShowStartInput" type="time" />
+        <div class="timing-kpis">
+          <div class="stat-card"><h3>Actual Show Start</h3><div class="value" id="timingActualStartCard">-</div><div class="stat-note" id="timingActualStartDate">Current show start</div></div>
+          <div class="stat-card"><h3>Target End</h3><div class="value" id="timingTargetEndCard">-</div><div class="stat-note">Start plus target runtime</div></div>
+          <div class="stat-card"><h3>Current Runtime</h3><div class="value" id="timingCurrentRuntimeCard">-</div><div class="stat-note">Elapsed since actual start</div></div>
+          <div class="stat-card"><h3>Buffer Status</h3><div class="value" id="timingBufferStatusCard">-</div><div class="stat-note" id="timingBufferNote">Safety buffer</div></div>
+        </div>
+
+        <div class="timing-grid">
+          <section class="panel timing-card">
+            <div class="panel-head"><h2>Show Timing Goals</h2><span class="chip">Forecast inputs</span></div>
+            <label>Actual Show Start<input id="actualShowStartInput" type="time" /></label>
+            <div class="inline-fields">
+              <label>Target Runtime Hours<input id="targetRuntimeHoursInput" type="number" min="0" step="1" /></label>
+              <label>Minutes<input id="targetRuntimeMinutesInput" type="number" min="0" max="59" step="1" /></label>
             </div>
-            <div>
-              <label class="field-label" for="targetRuntimeHoursInput">Target Hours</label>
-              <input id="targetRuntimeHoursInput" type="number" min="0" step="1" />
+            <label>Safety Buffer Minutes<input id="safetyBufferInput" type="number" min="0" step="1" value="3" /></label>
+            <div class="timing-preview-row"><span>Target End (Preview)</span><strong id="timingTargetPreview">-</strong></div>
+          </section>
+
+          <section class="panel timing-card timing-wide">
+            <div class="panel-head"><h2>Intermission Logic</h2><span class="chip">Read-only forecast</span></div>
+            <table class="mini-matrix">
+              <thead><tr><th></th><th>With Intermission</th><th>Skip Intermission</th></tr></thead>
+              <tbody>
+                <tr><td>Intermission Duration</td><td id="timingWithDuration">15:00</td><td id="timingSkipDuration">-</td></tr>
+                <tr><td>Estimated End Time</td><td id="timingWithEnd">-</td><td id="timingSkipEnd">-</td></tr>
+                <tr><td>Buffer Remaining</td><td id="timingWithBuffer">-</td><td id="timingSkipBuffer">-</td></tr>
+                <tr><td>Risk Level</td><td id="timingWithRisk">-</td><td id="timingSkipRisk">-</td></tr>
+                <tr><td>Recommended</td><td id="timingWithRecommendation">-</td><td id="timingSkipRecommendation">-</td></tr>
+              </tbody>
+            </table>
+            <div class="small">Recommendation based on current pace and buffers.</div>
+          </section>
+
+          <section class="panel timing-card">
+            <div class="panel-head"><h2>Intermission Behavior</h2><span class="chip">Saved settings</span></div>
+            <label class="switch-row">Lock Intermission Decision<input id="timingLockIntermissionToggle" type="checkbox" /></label>
+            <label>Lock Behavior<select id="timingLockBehaviorSelect"><option>Lock at T - 15:00</option><option>Lock after first branch item</option><option>Manual only</option></select></label>
+            <label class="switch-row">Change Requires Override<input id="timingOverrideToggle" type="checkbox" /></label>
+            <label>Override Role<select id="timingOverrideRoleSelect"><option>Stage Manager</option><option>Producer</option><option>Admin</option></select></label>
+          </section>
+
+          <section class="panel timing-card">
+            <div class="panel-head"><h2>Cue and Transition Timing</h2><span class="chip">Saved, not yet used in forecasts</span></div>
+            <label>Default Transition Buffer seconds<input id="defaultTransitionBufferInput" type="number" min="0" /></label>
+            <label>Stage Clear Buffer seconds<input id="stageClearBufferInput" type="number" min="0" /></label>
+            <label>Intro / Outro Buffer seconds<input id="introOutroBufferInput" type="number" min="0" /></label>
+            <label>Grace Period Over / Under seconds<input id="gracePeriodInput" type="number" min="0" /></label>
+          </section>
+
+          <section class="panel timing-card">
+            <div class="panel-head"><h2>View Sync Timing</h2><span class="chip">Live sync</span></div>
+            <label>View Refresh Interval seconds<input id="viewRefreshIntervalInput" type="number" min="0.5" step="0.5" /></label>
+            <label>Countdown Update Rate seconds<input id="countdownUpdateRateInput" type="number" min="0.5" step="0.5" /></label>
+            <div class="timing-preview-row"><span>Clock Sync Status</span><strong class="signal-success">Synchronized</strong></div>
+            <div class="timing-preview-row"><span>Last Sync</span><strong id="timingLastSync">-</strong></div>
+            <label>Time Source<input id="timingTimeSourceInput" type="text" /></label>
+          </section>
+
+          <section class="panel timing-card">
+            <div class="panel-head"><h2>Runtime Forecast</h2><span class="chip">Auto-updating</span></div>
+            <div class="forecast-list">
+              <div><span>With Intermission</span><strong id="forecastWithEnd">-</strong><em id="forecastWithBuffer">-</em></div>
+              <div><span>Without Intermission</span><strong id="forecastSkipEnd">-</strong><em id="forecastSkipBuffer">-</em></div>
+              <div><span>Stretch Goal</span><strong id="forecastStretchTarget">-</strong><em id="forecastStretchPace">-</em></div>
             </div>
-            <div>
-              <label class="field-label" for="targetRuntimeMinutesInput">Target Minutes</label>
-              <input id="targetRuntimeMinutesInput" type="number" min="0" max="59" step="1" />
-            </div>
-            <div>
-              <label class="field-label" for="safetyBufferInput">Safety Buffer Minutes</label>
-              <input id="safetyBufferInput" type="number" min="0" step="1" value="3" />
-            </div>
-          </div>
-          <button id="saveSettingsBtn" class="secondary settings-save">Save Settings</button>
-        </section>
+          </section>
+        </div>
+        <footer class="timing-footer">
+          <span id="timingSaveStatus">All timing changes are saved automatically after apply.</span>
+          <button id="resetTimingDefaultsBtn" class="secondary" type="button">Reset to Defaults</button>
+          <button id="saveTimingDraftBtn" class="secondary" type="button">Save Draft</button>
+          <button id="saveSettingsBtn" type="button">Apply Timing Settings</button>
+        </footer>
       </section>
 
       <section class="tab-page" data-tab-panel="system">
-        <section class="panel system-panel">
-          <div class="panel-head"><h2>System</h2><span class="chip">Operational</span></div>
-          <div class="system-grid">
-            <div class="list-item"><div>Firestore Path</div><div class="meta">/shows/main</div></div>
-            <div class="list-item"><div>Live Items</div><div class="meta">/shows/main/items</div></div>
-            <div class="list-item"><div>Setup Storage</div><div class="meta">/shows/main.setupItems</div></div>
-            <div class="list-item"><div>Theme Storage</div><div class="meta">localStorage</div></div>
+        <div class="system-top-grid">
+          <section class="panel system-panel">
+            <div class="panel-head"><h2>Environment Status</h2><span class="chip">Live</span></div>
+            <div class="system-list">
+              <div><span>Firebase Connection</span><strong class="signal-success" id="systemFirebaseStatus">Connected</strong></div>
+              <div><span>Data Sync Status</span><strong class="signal-success" id="systemSyncStatus">Healthy</strong></div>
+              <div><span>Last Sync</span><strong id="systemLastSync">-</strong></div>
+              <div><span>Current Show</span><strong id="systemCurrentShow">-</strong></div>
+            </div>
+          </section>
+
+          <section class="panel system-panel">
+            <div class="panel-head"><h2>Deployment / Build Info</h2><span class="chip">v2.5.0</span></div>
+            <div class="system-list">
+              <div><span>Application Version</span><strong>v2.5.0</strong></div>
+              <div><span>Build Date</span><strong>June 1, 2026</strong></div>
+              <div><span>Environment</span><strong>Production</strong></div>
+              <div><span>Feature Flags</span><strong class="signal-success">6 Enabled</strong></div>
+            </div>
+          </section>
+
+          <section class="panel system-panel">
+            <div class="panel-head"><h2>Data Management</h2><span class="chip">Read/write tools</span></div>
+            <div class="system-actions-list">
+              <button id="exportConfigBtn" class="secondary" type="button">Export Show Configuration</button>
+              <button id="systemExportReportsBtn" class="secondary" type="button">Export Reports</button>
+              <label class="backup-import-label"><span>Import Backup</span><input id="backupImportInput" type="file" accept=".json" /></label>
+              <button id="restoreDraftBtn" class="secondary" type="button">Restore Draft</button>
+            </div>
+          </section>
+
+          <section class="panel system-panel danger-system-panel">
+            <div class="panel-head"><h2>Operational Actions</h2><span class="chip">Confirm required</span></div>
+            <div class="system-actions-list">
+              <button id="systemResetShowBtn" class="warn" type="button">Reset Show State</button>
+              <button id="archiveShowBtn" class="warn" type="button">Archive Show</button>
+              <button id="duplicateShowBtn" class="danger" type="button">Duplicate Show</button>
+              <button id="clearRuntimeBtn" class="danger" type="button">Clear Runtime Data</button>
+            </div>
+          </section>
+        </div>
+
+        <section class="panel diagnostics-panel">
+          <div class="panel-head"><h2>Diagnostics</h2><span class="chip">Session measured</span></div>
+          <div class="diagnostics-grid">
+            <div><span>Console Health</span><strong class="signal-success">Healthy</strong><em>No console errors detected during session.</em></div>
+            <div><span>View Registration</span><strong id="systemViewRegistration">3 / 3</strong><em>Operator, performer, confidence loaded.</em></div>
+            <div><span>Screen Sync Health</span><strong class="signal-success" id="systemScreenSync">100%</strong><em>All subscribed views are in sync.</em></div>
+            <div><span>Database Latency</span><strong id="systemLatency">Not measured</strong><em>Firestore listener active.</em></div>
           </div>
         </section>
-        <section class="panel">
-          <div class="panel-head"><h2>Reports</h2><span class="chip">Coming from live data</span></div>
-          <p class="muted-copy">Run history, offsets, and item timings remain available through the live item data in Firestore.</p>
+
+        <section class="panel activity-panel">
+          <div class="table-toolbar">
+            <div><h2>Activity Log</h2><div class="small">Major actions from this browser session.</div></div>
+            <div class="toolbar-controls"><input id="activitySearchInput" type="search" placeholder="Search logs..." /><button id="clearActivityBtn" class="secondary" type="button">Clear</button></div>
+          </div>
+          <div class="table-wrap">
+            <table class="table activity-table" id="activityLogTable">
+              <thead><tr><th>Time</th><th>Level</th><th>Source</th><th>Event</th><th>Details</th><th>User</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
         </section>
       </section>
     </main>

@@ -48,6 +48,7 @@ const DEFAULT_SETTINGS = {
   notifications: { desktopNotifications: true, soundAlerts: "Chimes", criticalAlerts: "Always", toastDurationSeconds: 5, doNotDisturb: false },
   defaults: { defaultLandingPage: "Operator", defaultOperatorTab: "Live Control", confirmBeforeActions: true, clearCompletedAfter: "After 24 hours", exportFormat: "PDF" },
   systemMode: { kioskMode: false, lockUiInKiosk: false, idleTimeoutMinutes: 30, autoStartOnBoot: false, logLevel: "Information" },
+  visibility: { showIntermissionStatusBanner: true },
 };
 const DISPLAY_PRESETS = {
   laptop: { widthPx: 1920, heightPx: 1080, aspectRatio: "16:9", scalingMode: "Fit", zoomPercent: 100, fontScalePercent: 100, density: "Compact", safeAreaMarginPx: 32, orientation: "Landscape" },
@@ -55,6 +56,19 @@ const DISPLAY_PRESETS = {
   projector1080: { widthPx: 1920, heightPx: 1080, aspectRatio: "16:9", scalingMode: "Contain", zoomPercent: 95, fontScalePercent: 105, density: "Comfortable", safeAreaMarginPx: 64, orientation: "Landscape" },
   projector800: { widthPx: 1280, heightPx: 800, aspectRatio: "16:10", scalingMode: "Contain", zoomPercent: 90, fontScalePercent: 105, density: "Compact", safeAreaMarginPx: 56, orientation: "Landscape" },
   custom: {},
+};
+const DEFAULT_TIMING_SETTINGS = {
+  lockIntermissionDecision: false,
+  lockBehavior: "Lock at T - 15:00",
+  changeRequiresOverride: true,
+  overrideRole: "Stage Manager",
+  defaultTransitionBufferSeconds: 20,
+  stageClearBufferSeconds: 30,
+  introOutroBufferSeconds: 15,
+  gracePeriodSeconds: 10,
+  viewRefreshIntervalSeconds: 1,
+  countdownUpdateRateSeconds: 1,
+  timeSource: "Network Time Protocol (NTP)",
 };
 
 const seedItems = [
@@ -731,12 +745,15 @@ function applyDisplaySettings(settings = DEFAULT_SETTINGS) {
   document.documentElement.style.setProperty("--profile-height", `${profile.heightPx}px`);
   document.documentElement.style.setProperty("--safe-area-margin", `${profile.safeAreaMarginPx}px`);
   document.documentElement.style.setProperty("--ui-zoom", String(profile.zoomPercent / 100));
-  document.documentElement.style.setProperty("--font-scale-factor", String((profile.fontScalePercent / 100) * (sanitized.accessibility.fontScalePercent / 100)));
+  const fontScale = (profile.fontScalePercent / 100) * (sanitized.accessibility.fontScalePercent / 100);
+  document.documentElement.style.setProperty("--font-scale", String(fontScale));
+  document.documentElement.style.setProperty("--font-scale-factor", String(fontScale));
   document.documentElement.style.setProperty("--density-scale", String(densityMap[profile.density] || 1));
   document.body.dataset.profileDensity = profile.density.toLowerCase();
   document.body.classList.toggle("settings-high-contrast", !!sanitized.accessibility.highContrast);
   document.body.classList.toggle("settings-reduced-motion", !!sanitized.accessibility.reducedMotion);
   document.body.classList.toggle("settings-focus-strong", !!sanitized.accessibility.focusIndicators);
+  document.body.classList.toggle("hide-confidence-intermission", sanitized.visibility?.showIntermissionStatusBanner === false);
 }
 
 function initSidebarCollapse() {
@@ -832,6 +849,11 @@ async function initShow() {
   const baseShow = {
     displayName: window.__currentShowDataForInit?.setupTitle || window.__currentShowDataForInit?.displayName || "Stage Management System",
     setupTitle: window.__currentShowDataForInit?.setupTitle || window.__currentShowDataForInit?.displayName || "",
+    showDate: window.__currentShowDataForInit?.showDate || "",
+    venue: window.__currentShowDataForInit?.venue || "",
+    timezone: window.__currentShowDataForInit?.timezone || "",
+    settings: mergeSettings(window.__currentShowDataForInit?.settings || {}),
+    timingSettings: { ...DEFAULT_TIMING_SETTINGS, ...(window.__currentShowDataForInit?.timingSettings || {}) },
     setupItems,
     setupUpdatedAt: window.__currentShowDataForInit?.setupUpdatedAt || null,
     status: "stopped",
@@ -922,6 +944,42 @@ function initOperatorView() {
   const targetRuntimeMinutesInput = document.getElementById("targetRuntimeMinutesInput");
   const safetyBufferInput = document.getElementById("safetyBufferInput");
   const saveSettingsBtn = document.getElementById("saveSettingsBtn");
+  const timingActualStartCard = document.getElementById("timingActualStartCard");
+  const timingActualStartDate = document.getElementById("timingActualStartDate");
+  const timingTargetEndCard = document.getElementById("timingTargetEndCard");
+  const timingCurrentRuntimeCard = document.getElementById("timingCurrentRuntimeCard");
+  const timingBufferStatusCard = document.getElementById("timingBufferStatusCard");
+  const timingBufferNote = document.getElementById("timingBufferNote");
+  const timingTargetPreview = document.getElementById("timingTargetPreview");
+  const timingLockIntermissionToggle = document.getElementById("timingLockIntermissionToggle");
+  const timingLockBehaviorSelect = document.getElementById("timingLockBehaviorSelect");
+  const timingOverrideToggle = document.getElementById("timingOverrideToggle");
+  const timingOverrideRoleSelect = document.getElementById("timingOverrideRoleSelect");
+  const defaultTransitionBufferInput = document.getElementById("defaultTransitionBufferInput");
+  const stageClearBufferInput = document.getElementById("stageClearBufferInput");
+  const introOutroBufferInput = document.getElementById("introOutroBufferInput");
+  const gracePeriodInput = document.getElementById("gracePeriodInput");
+  const viewRefreshIntervalInput = document.getElementById("viewRefreshIntervalInput");
+  const countdownUpdateRateInput = document.getElementById("countdownUpdateRateInput");
+  const timingTimeSourceInput = document.getElementById("timingTimeSourceInput");
+  const timingLastSync = document.getElementById("timingLastSync");
+  const resetTimingDefaultsBtn = document.getElementById("resetTimingDefaultsBtn");
+  const saveTimingDraftBtn = document.getElementById("saveTimingDraftBtn");
+  const timingSaveStatus = document.getElementById("timingSaveStatus");
+  const timingWithEnd = document.getElementById("timingWithEnd");
+  const timingSkipEnd = document.getElementById("timingSkipEnd");
+  const timingWithBuffer = document.getElementById("timingWithBuffer");
+  const timingSkipBuffer = document.getElementById("timingSkipBuffer");
+  const timingWithRisk = document.getElementById("timingWithRisk");
+  const timingSkipRisk = document.getElementById("timingSkipRisk");
+  const timingWithRecommendation = document.getElementById("timingWithRecommendation");
+  const timingSkipRecommendation = document.getElementById("timingSkipRecommendation");
+  const forecastWithEnd = document.getElementById("forecastWithEnd");
+  const forecastSkipEnd = document.getElementById("forecastSkipEnd");
+  const forecastWithBuffer = document.getElementById("forecastWithBuffer");
+  const forecastSkipBuffer = document.getElementById("forecastSkipBuffer");
+  const forecastStretchTarget = document.getElementById("forecastStretchTarget");
+  const forecastStretchPace = document.getElementById("forecastStretchPace");
   const currentCaptainsEl = document.getElementById("currentCaptains");
   const backstageCaptainsEl = document.getElementById("backstageCaptains");
   const deckCaptainsEl = document.getElementById("deckCaptains");
@@ -950,6 +1008,9 @@ function initOperatorView() {
   const runTableBody = document.querySelector("#runTable tbody");
   const advancedToggle = document.getElementById("advancedToggle");
   const setupTitleInput = document.getElementById("setupTitleInput");
+  const setupDateInput = document.getElementById("setupDateInput");
+  const setupVenueInput = document.getElementById("setupVenueInput");
+  const setupTimezoneInput = document.getElementById("setupTimezoneInput");
   const setupStatusEl = document.getElementById("setupStatus");
   const setupTableBody = document.querySelector("#setupTable tbody");
   const addSetupItemBtn = document.getElementById("addSetupItemBtn");
@@ -961,7 +1022,12 @@ function initOperatorView() {
   const applyImportBtn = document.getElementById("applyImportBtn");
   const importStatusEl = document.getElementById("importStatus");
   const importPreviewEl = document.getElementById("importPreview");
+  const importTotalItemsEl = document.getElementById("importTotalItems");
+  const importValidRowsEl = document.getElementById("importValidRows");
+  const importWarningsEl = document.getElementById("importWarnings");
+  const importErrorsEl = document.getElementById("importErrors");
   const addSetupItemBtn2 = document.getElementById("addSetupItemBtn2");
+  const saveSetupDraftBtn = document.getElementById("saveSetupDraftBtn");
   const setupSearchInput = document.getElementById("setupSearchInput");
   const setupBranchFilter = document.getElementById("setupBranchFilter");
   const setupPaginationLabel = document.getElementById("setupPaginationLabel");
@@ -1011,6 +1077,19 @@ function initOperatorView() {
   const settingsDiscardBtn = document.getElementById("settingsDiscardBtn");
   const settingsResetBtn = document.getElementById("settingsResetBtn");
   const settingsSaveState = document.getElementById("settingsSaveState");
+  const exportConfigBtn = document.getElementById("exportConfigBtn");
+  const systemExportReportsBtn = document.getElementById("systemExportReportsBtn");
+  const backupImportInput = document.getElementById("backupImportInput");
+  const restoreDraftBtn = document.getElementById("restoreDraftBtn");
+  const systemResetShowBtn = document.getElementById("systemResetShowBtn");
+  const archiveShowBtn = document.getElementById("archiveShowBtn");
+  const duplicateShowBtn = document.getElementById("duplicateShowBtn");
+  const clearRuntimeBtn = document.getElementById("clearRuntimeBtn");
+  const systemLastSync = document.getElementById("systemLastSync");
+  const systemCurrentShow = document.getElementById("systemCurrentShow");
+  const activitySearchInput = document.getElementById("activitySearchInput");
+  const clearActivityBtn = document.getElementById("clearActivityBtn");
+  const activityLogTableBody = document.querySelector("#activityLogTable tbody");
   const footerStatusEl = document.getElementById("footerStatus");
 
   let showData = null;
@@ -1018,6 +1097,7 @@ function initOperatorView() {
   let setupDraft = [];
   let importDraft = [];
   let settingsDraft = mergeSettings();
+  let activityLog = [];
   let setupLoaded = false;
   let lastSnapshot = null;
   let actionInFlight = false;
@@ -1517,6 +1597,9 @@ function initOperatorView() {
   function loadSetupDraft(source = "saved") {
     setupDraft = setupItemsFromShow(showData, source === "runtime" ? items : []);
     if (setupTitleInput) setupTitleInput.value = showData?.setupTitle || showData?.displayName || "";
+    if (setupDateInput) setupDateInput.value = showData?.showDate || "";
+    if (setupVenueInput) setupVenueInput.value = showData?.venue || "";
+    if (setupTimezoneInput) setupTimezoneInput.value = showData?.timezone || "";
     renderSetupTable();
     setupStatus(source === "runtime" ? "Loaded current live items into setup." : "Loaded saved setup.", source === "runtime" ? "warn" : "");
     if (setupSourceLabel) setupSourceLabel.textContent = source === "runtime" ? "Live items / fallback" : "Saved setup";
@@ -1533,6 +1616,9 @@ function initOperatorView() {
       ...(showData || {}),
       displayName: title || "Stage Management System",
       setupTitle: title,
+      showDate: setupDateInput?.value || "",
+      venue: setupVenueInput?.value?.trim() || "",
+      timezone: setupTimezoneInput?.value?.trim() || "",
       setupItems: sorted,
       setupUpdatedAt: new Date(),
     };
@@ -1543,6 +1629,7 @@ function initOperatorView() {
     renderSetupTable();
     setupStatus("Setup saved. Init Show / Reset will use it.", "saved");
     if (setupSourceLabel) setupSourceLabel.textContent = "Saved setup";
+    addActivity("INFO", "Show Setup", "Save Setup", `Saved ${sorted.length} setup rows.`);
   }
 
   function importStatus(message, tone = "") {
@@ -1551,6 +1638,13 @@ function initOperatorView() {
     importStatusEl.classList.toggle("warn", tone === "warn");
     importStatusEl.classList.toggle("saved", tone === "saved");
     importStatusEl.classList.toggle("danger", tone === "danger");
+  }
+
+  function setImportMetrics(total = 0, valid = 0, warnings = 0, errors = 0) {
+    if (importTotalItemsEl) importTotalItemsEl.textContent = String(total);
+    if (importValidRowsEl) importValidRowsEl.textContent = String(valid);
+    if (importWarningsEl) importWarningsEl.textContent = String(warnings);
+    if (importErrorsEl) importErrorsEl.textContent = String(errors);
   }
 
   function canonicalHeader(value) {
@@ -1617,8 +1711,12 @@ function initOperatorView() {
     if (!importPreviewEl) return;
     if (!results.length) {
       importPreviewEl.innerHTML = "";
+      setImportMetrics(0, 0, 0, 0);
       return;
     }
+    const errorCount = results.filter((result) => result.errors.length).length;
+    const warningCount = results.filter((result) => !result.errors.length && (!result.item.performers.length || !result.item.plannedSeconds)).length;
+    setImportMetrics(results.length, results.length - errorCount, warningCount, errorCount);
     const rows = results.slice(0, 12).map((result, index) => `
       <tr class="${result.errors.length ? "invalid" : ""}">
         <td>${index + 1}</td>
@@ -1677,6 +1775,7 @@ function initOperatorView() {
     renderSetupTable();
     await saveSetupDraft();
     importStatus("Imported setup saved to Firestore.", "saved");
+    addActivity("INFO", "Show Setup", "Apply Import", `Imported ${setupDraft.length} setup rows.`);
   }
 
   async function withActionLock(fn) {
@@ -2048,6 +2147,88 @@ function initOperatorView() {
     return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
   }
 
+  function timingSettingsFromDom() {
+    const current = { ...DEFAULT_TIMING_SETTINGS, ...(showData?.timingSettings || {}) };
+    return {
+      lockIntermissionDecision: !!timingLockIntermissionToggle?.checked,
+      lockBehavior: timingLockBehaviorSelect?.value || current.lockBehavior,
+      changeRequiresOverride: !!timingOverrideToggle?.checked,
+      overrideRole: timingOverrideRoleSelect?.value || current.overrideRole,
+      defaultTransitionBufferSeconds: Math.max(0, Number(defaultTransitionBufferInput?.value || current.defaultTransitionBufferSeconds)),
+      stageClearBufferSeconds: Math.max(0, Number(stageClearBufferInput?.value || current.stageClearBufferSeconds)),
+      introOutroBufferSeconds: Math.max(0, Number(introOutroBufferInput?.value || current.introOutroBufferSeconds)),
+      gracePeriodSeconds: Math.max(0, Number(gracePeriodInput?.value || current.gracePeriodSeconds)),
+      viewRefreshIntervalSeconds: Math.max(0.5, Number(viewRefreshIntervalInput?.value || current.viewRefreshIntervalSeconds)),
+      countdownUpdateRateSeconds: Math.max(0.5, Number(countdownUpdateRateInput?.value || current.countdownUpdateRateSeconds)),
+      timeSource: timingTimeSourceInput?.value?.trim() || current.timeSource,
+    };
+  }
+
+  function riskLabel(seconds) {
+    if (seconds == null || Number.isNaN(seconds)) return "-";
+    if (seconds >= 180) return "LOW";
+    if (seconds >= 0) return "MEDIUM";
+    return "HIGH";
+  }
+
+  function renderTimingDashboard() {
+    if (!showData) return;
+    const startAt = getActualShowStartAt(showData);
+    const targetEnd = getTargetEndAt(showData);
+    const runtime = getTargetRuntimeSeconds(showData);
+    const timingSettings = { ...DEFAULT_TIMING_SETTINGS, ...(showData.timingSettings || {}) };
+    const plan = planForShow(showData, items);
+    const withTiming = computeProjectedTiming(showData, items, PLAN_WITH_INTERMISSION);
+    const skipTiming = computeProjectedTiming(showData, items, PLAN_SKIP_INTERMISSION);
+    const targetEndAt = getTargetEndAt(showData);
+    const withBuffer = targetEndAt ? Math.round((targetEndAt - withTiming.projectedEndAt) / 1000) : null;
+    const skipBuffer = targetEndAt ? Math.round((targetEndAt - skipTiming.projectedEndAt) / 1000) : null;
+    const elapsedShow = startAt ? Math.max(0, Math.round((Date.now() - startAt.getTime()) / 1000)) : null;
+
+    if (timingActualStartCard) timingActualStartCard.textContent = formatClock(startAt);
+    if (timingActualStartDate) timingActualStartDate.textContent = dateDisplay(startAt) || "Current show start";
+    if (timingTargetEndCard) timingTargetEndCard.textContent = formatClock(targetEnd);
+    if (timingCurrentRuntimeCard) timingCurrentRuntimeCard.textContent = elapsedShow == null ? "-" : formatHms(elapsedShow);
+    if (timingBufferStatusCard) {
+      const currentBuffer = plan === PLAN_SKIP_INTERMISSION ? skipBuffer : withBuffer;
+      timingBufferStatusCard.textContent = currentBuffer == null ? "-" : currentBuffer >= 0 ? "ON TRACK" : "BEHIND";
+      applySignal(timingBufferStatusCard, currentBuffer == null ? "muted" : currentBuffer >= 0 ? "success" : "danger");
+    }
+    if (timingBufferNote) {
+      const currentBuffer = plan === PLAN_SKIP_INTERMISSION ? skipBuffer : withBuffer;
+      timingBufferNote.textContent = currentBuffer == null ? "Safety buffer" : `${formatSignedDuration(currentBuffer)} buffer remaining`;
+    }
+    if (timingTargetPreview) timingTargetPreview.textContent = formatClock(targetEnd);
+    if (timingWithEnd) timingWithEnd.textContent = formatClock(withTiming.projectedEndAt);
+    if (timingSkipEnd) timingSkipEnd.textContent = formatClock(skipTiming.projectedEndAt);
+    if (timingWithBuffer) timingWithBuffer.textContent = formatSignedDuration(withBuffer);
+    if (timingSkipBuffer) timingSkipBuffer.textContent = formatSignedDuration(skipBuffer);
+    if (timingWithRisk) timingWithRisk.textContent = riskLabel(withBuffer);
+    if (timingSkipRisk) timingSkipRisk.textContent = riskLabel(skipBuffer);
+    if (timingWithRecommendation) timingWithRecommendation.textContent = plan === PLAN_WITH_INTERMISSION ? "RECOMMENDED" : "ALTERNATIVE";
+    if (timingSkipRecommendation) timingSkipRecommendation.textContent = plan === PLAN_SKIP_INTERMISSION ? "RECOMMENDED" : "ALTERNATIVE";
+    if (forecastWithEnd) forecastWithEnd.textContent = formatClock(withTiming.projectedEndAt);
+    if (forecastSkipEnd) forecastSkipEnd.textContent = formatClock(skipTiming.projectedEndAt);
+    if (forecastWithBuffer) forecastWithBuffer.textContent = `${formatSignedDuration(withBuffer)} buffer`;
+    if (forecastSkipBuffer) forecastSkipBuffer.textContent = `${formatSignedDuration(skipBuffer)} buffer`;
+    if (forecastStretchTarget) forecastStretchTarget.textContent = formatClock(targetEnd);
+    if (forecastStretchPace) forecastStretchPace.textContent = showData.offsetSeconds == null ? "-" : `${showData.offsetSeconds > 0 ? "+" : "-"}${formatDuration(Math.abs(showData.offsetSeconds))} total`;
+    if (timingLastSync) timingLastSync.textContent = formatClock(new Date());
+
+    if (timingLockIntermissionToggle && document.activeElement !== timingLockIntermissionToggle) timingLockIntermissionToggle.checked = !!(showData.intermissionDecisionLocked || timingSettings.lockIntermissionDecision);
+    if (timingLockBehaviorSelect && document.activeElement !== timingLockBehaviorSelect) timingLockBehaviorSelect.value = timingSettings.lockBehavior;
+    if (timingOverrideToggle && document.activeElement !== timingOverrideToggle) timingOverrideToggle.checked = !!timingSettings.changeRequiresOverride;
+    if (timingOverrideRoleSelect && document.activeElement !== timingOverrideRoleSelect) timingOverrideRoleSelect.value = timingSettings.overrideRole;
+    if (defaultTransitionBufferInput && document.activeElement !== defaultTransitionBufferInput) defaultTransitionBufferInput.value = timingSettings.defaultTransitionBufferSeconds;
+    if (stageClearBufferInput && document.activeElement !== stageClearBufferInput) stageClearBufferInput.value = timingSettings.stageClearBufferSeconds;
+    if (introOutroBufferInput && document.activeElement !== introOutroBufferInput) introOutroBufferInput.value = timingSettings.introOutroBufferSeconds;
+    if (gracePeriodInput && document.activeElement !== gracePeriodInput) gracePeriodInput.value = timingSettings.gracePeriodSeconds;
+    if (viewRefreshIntervalInput && document.activeElement !== viewRefreshIntervalInput) viewRefreshIntervalInput.value = timingSettings.viewRefreshIntervalSeconds;
+    if (countdownUpdateRateInput && document.activeElement !== countdownUpdateRateInput) countdownUpdateRateInput.value = timingSettings.countdownUpdateRateSeconds;
+    if (timingTimeSourceInput && document.activeElement !== timingTimeSourceInput) timingTimeSourceInput.value = timingSettings.timeSource;
+    if (timingSaveStatus) timingSaveStatus.textContent = `Target runtime ${formatHms(runtime)}. New buffer fields are saved for operations and future forecasts.`;
+  }
+
   function renderSettings() {
     if (!showData) return;
     const startAt = getActualShowStartAt(showData);
@@ -2056,6 +2237,7 @@ function initOperatorView() {
     if (targetRuntimeHoursInput && document.activeElement !== targetRuntimeHoursInput) targetRuntimeHoursInput.value = String(Math.floor(runtime / 3600));
     if (targetRuntimeMinutesInput && document.activeElement !== targetRuntimeMinutesInput) targetRuntimeMinutesInput.value = String(Math.round((runtime % 3600) / 60));
     if (safetyBufferInput && document.activeElement !== safetyBufferInput) safetyBufferInput.value = String(Number(showData.safetyBufferMinutes ?? DEFAULT_SAFETY_BUFFER_MINUTES));
+    renderTimingDashboard();
   }
 
   function renderShow() {
@@ -2252,11 +2434,23 @@ function initOperatorView() {
       actualShowStartAt,
       targetRuntimeSeconds,
       safetyBufferMinutes,
+      timingSettings: timingSettingsFromDom(),
+      intermissionDecisionLocked: !!timingLockIntermissionToggle?.checked || !!showData.intermissionDecisionLocked,
     };
+    if (timingSaveStatus) timingSaveStatus.textContent = "Timing settings saved and applied.";
     await commitItemAndShowState(items, nextShow);
   }
 
   function setActiveTab(tab) {
+    const hashByTab = {
+      live: "#operator",
+      setup: "#show-setup",
+      timing: "#timing-settings",
+      system: "#system",
+      run: "#run-of-show",
+      reports: "#reports",
+      settings: "#settings",
+    };
     document.querySelectorAll("[data-tab]").forEach((btn) => btn.classList.toggle("active", btn.dataset.tab === tab));
     document.querySelectorAll("[data-tab-panel]").forEach((panel) => {
       const active = panel.dataset.tabPanel === tab;
@@ -2280,6 +2474,8 @@ function initOperatorView() {
     if (tab === "run") renderRunOfShow();
     if (tab === "reports") renderReportsView();
     if (tab === "settings") renderSettingsForm();
+    if (tab === "system") renderSystemView();
+    if (hashByTab[tab] && window.location.hash !== hashByTab[tab]) history.replaceState(null, "", hashByTab[tab]);
   }
 
   function currentRunItem() {
@@ -2419,6 +2615,107 @@ function initOperatorView() {
     window.print();
   }
 
+  function downloadTextFile(filename, text, type = "application/json") {
+    const blob = new Blob([text], { type });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  function addActivity(level, source, event, details, user = "Stage Manager") {
+    activityLog.unshift({
+      time: new Date(),
+      level,
+      source,
+      event,
+      details,
+      user,
+    });
+    activityLog = activityLog.slice(0, 80);
+    renderActivityLog();
+  }
+
+  function renderActivityLog() {
+    if (!activityLogTableBody) return;
+    const search = String(activitySearchInput?.value || "").trim().toLowerCase();
+    const visible = activityLog.filter((entry) => !search || `${entry.level} ${entry.source} ${entry.event} ${entry.details} ${entry.user}`.toLowerCase().includes(search));
+    if (!visible.length) {
+      activityLogTableBody.innerHTML = `<tr><td colspan="6" class="empty-cell">No activity logged for this browser session.</td></tr>`;
+      return;
+    }
+    activityLogTableBody.innerHTML = visible.map((entry) => `
+      <tr>
+        <td>${formatClock(entry.time)}</td>
+        <td><span class="tag ${entry.level.toLowerCase()}">${escapeHtml(entry.level)}</span></td>
+        <td>${escapeHtml(entry.source)}</td>
+        <td>${escapeHtml(entry.event)}</td>
+        <td>${escapeHtml(entry.details)}</td>
+        <td>${escapeHtml(entry.user)}</td>
+      </tr>
+    `).join("");
+  }
+
+  function renderSystemView() {
+    if (systemLastSync) systemLastSync.textContent = formatClock(new Date());
+    if (systemCurrentShow) systemCurrentShow.textContent = showData?.displayName || showData?.setupTitle || "Stage Management System";
+    renderActivityLog();
+  }
+
+  function exportShowConfiguration() {
+    const payload = {
+      exportedAt: new Date().toISOString(),
+      firestorePath: `/shows/${SHOW_ID}`,
+      show: showData || {},
+      items,
+      setupItems: setupDraft,
+    };
+    downloadTextFile(`show-configuration-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify(payload, null, 2));
+    addActivity("INFO", "System", "Export Show Configuration", "Downloaded show configuration JSON.");
+  }
+
+  async function clearRuntimeData() {
+    if (!confirm("Clear runtime timing/status data for all items? Setup rows will remain.")) return;
+    const plan = planForShow(showData, items);
+    const cleared = items.map((item) => ({ ...item, status: "queued", actualStartAt: null, actualEndAt: null }));
+    const normalized = normalizeQueueForPlan(cleared, { ...showData, status: "stopped", holdMessage: "" }, plan);
+    items = normalized.items;
+    showData = normalized.show;
+    await commitItemAndShowState(normalized.items, normalized.show);
+    addActivity("WARN", "Operator", "Clear Runtime Data", "Cleared item starts, ends, and live statuses.");
+  }
+
+  async function archiveShow() {
+    if (!confirm("Archive the current show as read-only metadata?")) return;
+    await updateDoc(showRef, { archivedAt: serverTimestamp(), archiveStatus: "archived", updatedAt: serverTimestamp() });
+    addActivity("WARN", "Operator", "Archive Show", "Marked the current show archived.");
+  }
+
+  function duplicateShow() {
+    const payload = {
+      duplicatedAt: new Date().toISOString(),
+      sourceShow: showData || {},
+      items,
+    };
+    downloadTextFile(`duplicate-show-template-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify(payload, null, 2));
+    addActivity("INFO", "System", "Duplicate Show", "Downloaded a duplicate show template JSON.");
+  }
+
+  async function restoreDraft() {
+    if (!Array.isArray(showData?.setupItems) || !showData.setupItems.length) {
+      alert("No saved setup draft is available to restore.");
+      return;
+    }
+    if (!confirm("Restore the saved setup draft into the Show Setup editor?")) return;
+    loadSetupDraft("saved");
+    setActiveTab("setup");
+    addActivity("INFO", "Operator", "Restore Draft", "Loaded saved setup draft into Show Setup.");
+  }
+
   startBtn?.addEventListener("click", () => safeRun(() => withActionLock(async () => {
     lastSnapshot = snapshotState();
     await startCurrentItemFast();
@@ -2470,6 +2767,7 @@ function initOperatorView() {
   });
 
   saveSetupBtn?.addEventListener("click", () => safeRun(() => saveSetupDraft()));
+  saveSetupDraftBtn?.addEventListener("click", () => safeRun(() => saveSetupDraft()));
   previewImportBtn?.addEventListener("click", () => safeRun(() => previewExcelImport()));
   applyImportBtn?.addEventListener("click", () => safeRun(() => applyExcelImport()));
 
@@ -2493,6 +2791,9 @@ function initOperatorView() {
     if (currentHash === "#run-of-show") setActiveTab("run");
     else if (currentHash === "#reports") setActiveTab("reports");
     else if (currentHash === "#settings") setActiveTab("settings");
+    else if (currentHash === "#show-setup") setActiveTab("setup");
+    else if (currentHash === "#timing-settings") setActiveTab("timing");
+    else if (currentHash === "#system") setActiveTab("system");
     else setActiveTab("live");
   }
   window.addEventListener("hashchange", applyHashRoute);
@@ -2524,6 +2825,28 @@ function initOperatorView() {
   keepIntermissionBtn?.addEventListener("click", () => safeRun(() => setIntermissionPlan(PLAN_WITH_INTERMISSION)));
   skipIntermissionBtn?.addEventListener("click", () => safeRun(() => setIntermissionPlan(PLAN_SKIP_INTERMISSION)));
   saveSettingsBtn?.addEventListener("click", () => safeRun(() => saveSettings()));
+  saveTimingDraftBtn?.addEventListener("click", () => safeRun(async () => {
+    if (!showData) throw new Error("Show not initialized. Click Init Show / Reset first.");
+    await updateDoc(showRef, { timingSettings: timingSettingsFromDom(), updatedAt: serverTimestamp() });
+    if (timingSaveStatus) timingSaveStatus.textContent = "Timing draft saved.";
+    addActivity("INFO", "Timing", "Save Draft", "Saved timing settings draft.");
+  }));
+  resetTimingDefaultsBtn?.addEventListener("click", () => {
+    if (!confirm("Reset timing settings to defaults?")) return;
+    const defaults = DEFAULT_TIMING_SETTINGS;
+    if (timingLockIntermissionToggle) timingLockIntermissionToggle.checked = defaults.lockIntermissionDecision;
+    if (timingLockBehaviorSelect) timingLockBehaviorSelect.value = defaults.lockBehavior;
+    if (timingOverrideToggle) timingOverrideToggle.checked = defaults.changeRequiresOverride;
+    if (timingOverrideRoleSelect) timingOverrideRoleSelect.value = defaults.overrideRole;
+    if (defaultTransitionBufferInput) defaultTransitionBufferInput.value = defaults.defaultTransitionBufferSeconds;
+    if (stageClearBufferInput) stageClearBufferInput.value = defaults.stageClearBufferSeconds;
+    if (introOutroBufferInput) introOutroBufferInput.value = defaults.introOutroBufferSeconds;
+    if (gracePeriodInput) gracePeriodInput.value = defaults.gracePeriodSeconds;
+    if (viewRefreshIntervalInput) viewRefreshIntervalInput.value = defaults.viewRefreshIntervalSeconds;
+    if (countdownUpdateRateInput) countdownUpdateRateInput.value = defaults.countdownUpdateRateSeconds;
+    if (timingTimeSourceInput) timingTimeSourceInput.value = defaults.timeSource;
+    if (timingSaveStatus) timingSaveStatus.textContent = "Defaults restored. Apply to save them.";
+  });
   rosSearchInput?.addEventListener("input", () => renderRunOfShow());
   rosStatusFilter?.addEventListener("change", () => renderRunOfShow());
   rosTypeFilter?.addEventListener("change", () => renderRunOfShow());
@@ -2538,6 +2861,51 @@ function initOperatorView() {
   reportsCsvBtn?.addEventListener("click", () => exportReportsCsv());
   reportsExcelBtn?.addEventListener("click", () => safeRun(() => exportReportsExcel()));
   reportsPdfBtn?.addEventListener("click", () => printReportsPdf());
+  exportConfigBtn?.addEventListener("click", () => exportShowConfiguration());
+  systemExportReportsBtn?.addEventListener("click", () => exportReportsCsv());
+  restoreDraftBtn?.addEventListener("click", () => safeRun(() => restoreDraft()));
+  systemResetShowBtn?.addEventListener("click", () => safeRun(async () => {
+    if (!confirm("Reset the show state from saved setup?")) return;
+    readSetupDraftFromDom();
+    window.__currentShowDataForInit = showData;
+    window.__currentRuntimeItemsForInit = items;
+    window.__currentSetupDraftForInit = setupDraft;
+    const initialized = await initShow();
+    if (initialized) {
+      showData = initialized.show;
+      items = initialized.items;
+      renderShow();
+      renderRunTable();
+      renderRunOfShow();
+      renderReportsView();
+      addActivity("WARN", "Operator", "Reset Show State", "Reset show runtime from saved setup.");
+    }
+  }));
+  archiveShowBtn?.addEventListener("click", () => safeRun(() => archiveShow()));
+  duplicateShowBtn?.addEventListener("click", () => duplicateShow());
+  clearRuntimeBtn?.addEventListener("click", () => safeRun(() => clearRuntimeData()));
+  activitySearchInput?.addEventListener("input", () => renderActivityLog());
+  clearActivityBtn?.addEventListener("click", () => {
+    activityLog = [];
+    renderActivityLog();
+  });
+  backupImportInput?.addEventListener("change", () => safeRun(async () => {
+    const file = backupImportInput.files?.[0];
+    if (!file) return;
+    const text = await file.text();
+    const payload = JSON.parse(text);
+    if (!confirm("Import this backup into Show Setup? Runtime data will not be overwritten until you publish/reset.")) return;
+    setupDraft = Array.isArray(payload.setupItems) ? payload.setupItems : Array.isArray(payload.show?.setupItems) ? payload.show.setupItems : [];
+    if (payload.show) {
+      if (setupTitleInput) setupTitleInput.value = payload.show.setupTitle || payload.show.displayName || "";
+      if (setupDateInput) setupDateInput.value = payload.show.showDate || "";
+      if (setupVenueInput) setupVenueInput.value = payload.show.venue || "";
+      if (setupTimezoneInput) setupTimezoneInput.value = payload.show.timezone || "";
+    }
+    renderSetupTable();
+    setActiveTab("setup");
+    addActivity("WARN", "System", "Import Backup", "Imported backup into setup draft.");
+  }));
   document.querySelectorAll("[data-profile-field], [data-setting-path]").forEach((input) => {
     input.addEventListener("input", () => markSettingsUnsaved());
     input.addEventListener("change", () => markSettingsUnsaved());
@@ -2605,6 +2973,7 @@ function initOperatorView() {
     renderRunTable();
     renderRunOfShow();
     renderReportsView();
+    renderSystemView();
   });
   subscribeItems((list) => {
     items = list;
@@ -2616,6 +2985,7 @@ function initOperatorView() {
     renderRunTable();
     renderRunOfShow();
     renderReportsView();
+    renderSystemView();
   });
 
   setInterval(updateClock, 1000);
